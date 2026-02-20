@@ -1,306 +1,200 @@
-/* Container for the entire road system */
-.road-wrapper {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  padding: 80px 0;
-  display: flex;
-  justify-content: center;
-  background-color: #f8f9fa;
-  overflow-x: hidden;
-}
+/* ==========================================================================
+   1. MAIN CONTAINERS & TRACK
+   ========================================================================== */
 
-/* The central moving road line */
-.moving-road-line {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 12px;
-  transform: translateX(-50%);
-  /* Creating the asphalt and white dashes */
-  background: repeating-linear-gradient(
-    to bottom,
-    #334155 0px,
-    #334155 40px,
-    #ffffff 40px,
-    #ffffff 80px
-  );
-  background-size: 100% 80px;
-  animation: drive 1.2s linear infinite;
-  z-index: 1;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-
-/* The movement animation */
-@keyframes drive {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 0 80px;
-  }
-}
-
-/* Container for stages to ensure they stay on top of the road */
-.stages-timeline {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 1100px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Individual segment (Stage + its Substages) */
-.road-segment {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-bottom: 120px;
-}
-
-/* Styles for the circular Stage Node */
-.road-node {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: white;
-  border: 6px solid #94a3b8;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 15px;
-  font-weight: bold;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
-  z-index: 3;
-}
-
-/* Status-specific node colors */
-.road-node.active {
-  border-color: #3b82f6; /* Blue */
-  transform: scale(1.1);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-}
-
-.road-node.completed {
-  border-color: #22c55e; /* Green */
-  background-color: #f0fdf4;
-}
-
-.road-node.inactive {
-  border-color: #cbd5e1;
-  opacity: 0.8;
-}
-
-/* Title inside the circle */
-.road-node h3 {
-  font-size: 0.75rem;
-  margin-bottom: 8px;
-  color: #1e293b;
-  text-transform: uppercase;
-}
-
-/* Dropdown styling inside the node */
-.status-dropdown {
-  width: 90%;
-  padding: 4px;
-  border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  font-size: 0.7rem;
-  cursor: pointer;
-}
+/* Mobile-First: Stacks vertically on small screens */
 .horizontal-road-wrapper {
   position: relative;
   width: 100%;
-  padding: 100px 50px;
-  overflow-x: auto; /* Allows scrolling if stages exceed screen width */
+  padding: 40px 20px;
   background-color: #f0f2f5;
+  overflow-x: hidden;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap:0; /* Gap is handled by the connector line */
-}
-
-.horizontal-road-line {
-  position: none;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 20px;
-  transform: translateY(-50%);
-  background: repeating-linear-gradient(
-    to right,
-    #334155 0px,
-    #334155 40px,
-    #ffffff 40px,
-    #ffffff 80px
-  );
-  background-size: 80px 100%;
-  z-index: 1;
-}
-
-/* Animation only runs when this class is present */
-.horizontal-road-line.moving {
-  animation: driveHorizontal 1.2s linear infinite;
-}
-
-.horizontal-road-line.paused {
-  animation-play-state: paused;
-}
-
-@keyframes driveHorizontal {
-  from { background-position: 0 0; }
-  to { background-position: 80px 0; }
 }
 
 .horizontal-stages-track {
   display: flex;
-  gap: 10px; /* Space between the rectangular stages */
+  flex-direction: column; /* Stack stages vertically on mobile */
+  align-items: center;
+  gap: 0;
   z-index: 2;
   position: relative;
+  width: 100%;
 }
 
-/* Rectangular Stage Node */
+/* Desktop Upgrade: Snaps to horizontal layout */
+@media (min-width: 768px) {
+  .horizontal-road-wrapper {
+    padding: 80px 50px;
+    overflow-x: auto; /* Allow horizontal scrolling */
+    align-items: flex-start; /* Align to top */
+  }
+
+  .horizontal-stages-track {
+    flex-direction: row; /* Line up horizontally */
+    min-width: max-content; /* Allow the track to stretch infinitely */
+  }
+}
+
+
+/* ==========================================================================
+   2. STAGE CARDS
+   ========================================================================== */
+
 .stage-card {
-  width: 280px;
-  background: white;
-  border: 3px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
-}
-
-.stage-card.active {
-  border-color: #3b82f6;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-  transform: translateY(-10px);
-}
-
-.stage-card.completed {
-  border-color: #22c55e;
-  background-color: #f0fdf4;
-}
-/* The Main horizontal track */
-.horizontal-road-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 100px 50px;
-  gap: 0; /* Gap is handled by the connector line */
-}
-
-/* Internal Vertical Road (Inside the Rectangular Block) */
-.vertical-inner-road {
-  position: absolute;
-  left: 20px; /* Positioned on the left side of the card */
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  background: repeating-linear-gradient(
-    to bottom,
-    #334155 0px,
-    #334155 10px,
-    #e2e8f0 10px,
-    #e2e8f0 20px
-  );
-  background-size: 100% 20px;
-  opacity: 0.3;
-}
-
-.active .vertical-inner-road {
-  opacity: 1;
-  animation: driveVertical 0.8s linear infinite;
-}
-
-@keyframes driveVertical {
-  from { background-position: 0 0; }
-  to { background-position: 0 20px; }
-}
-
-/* Horizontal Connector Line (Between Blocks) */
-.stage-connector {
-  width: 100px; /* Distance between stages */
-  height: 12px;
-  flex-shrink: 0;
-  background: repeating-linear-gradient(
-    to right,
-    #334155 0px,
-    #334155 15px,
-    #cbd5e1 15px,
-    #cbd5e1 30px
-  );
-  background-size: 30px 100%;
-  align-self: center;
-}
-
-.stage-connector.moving {
-  animation: driveHorizontal 1s linear infinite;
-}
-
-@keyframes driveHorizontal {
-  from { background-position: 0 0; }
-  to { background-position: 30px 0; }
-}
-/* The Main Stage Rectangular Box */
-.stage-card {
-  width: 420px;
-  background: #e2e8f0; /* Light Gray */
+  width: 100%;
+  max-width: 380px; /* Limits width on big screens */
+  min-width: 280px; /* Prevents squishing on tiny phones */
+  background: #e2e8f0;
   border: 2px solid #94a3b8;
   border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  padding: 16px;
   position: relative;
   min-height: 250px;
+  display: flex;
+  flex-direction: column;
   transition: all 0.3s ease;
+  z-index: 1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .stage-card.active {
   background: #f1f5f9;
   border-color: #3b82f6;
   box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+  transform: translateY(-5px);
 }
 
-/* Internal Vertical Road */
-.vertical-inner-road {
-  position: absolute;
-  left: 15px;
-  top: 10px;
-  bottom: 10px;
-  width: 8px;
+.stage-card.completed {
+  border-color: #22c55e;
+  background-color: #f0fdf4;
+}
+
+/* Ensure content is readable over the moving road */
+.stage-content {
+  position: relative;
+  z-index: 2;
+  background: rgba(226, 232, 240, 0.85); /* Frosting effect */
+  border-radius: 8px;
+  padding: 10px;
+  backdrop-filter: blur(2px);
+}
+
+
+/* ==========================================================================
+   3. ROAD CONNECTORS (THE BRIDGES BETWEEN STAGES)
+   ========================================================================== */
+
+/* Mobile: Vertical Bridge */
+.stage-connector {
+  width: 12px;
+  height: 60px; /* Vertical gap distance */
   background: repeating-linear-gradient(
-    to bottom,
-    #475569 0px,
-    #475569 15px,
-    #ffffff 15px,
-    #ffffff 30px
+    to bottom, /* Vertical stripes */
+    #334155 0px,
+    #334155 15px,
+    #cbd5e1 15px,
+    #cbd5e1 30px
   );
   background-size: 100% 30px;
-  border-radius: 4px;
-  opacity: 0.2;
+  transition: opacity 0.3s ease;
+  align-self: center;
+  margin: 10px 0;
 }
 
-.active .vertical-inner-road {
+.stage-connector.moving {
+  animation: driveVerticalBridge 0.8s linear infinite;
+  border-left: 2px solid #3b82f6;
+  border-right: 2px solid #3b82f6;
+}
+
+@keyframes driveVerticalBridge {
+  from { background-position: 0 0; }
+  to { background-position: 0 30px; }
+}
+
+/* Desktop: Horizontal Bridge */
+@media (min-width: 768px) {
+  .stage-connector {
+    width: 80px; /* Horizontal gap distance */
+    height: 12px;
+    margin: 40px 10px 0 10px; /* Aligns road with the top of the cards */
+    background: repeating-linear-gradient(
+      to right, /* Horizontal stripes */
+      #334155 0px,
+      #334155 15px,
+      #cbd5e1 15px,
+      #cbd5e1 30px
+    );
+    background-size: 30px 100%;
+  }
+
+  .stage-connector.moving {
+    animation: driveHorizontalBridge 0.8s linear infinite;
+    border-top: 2px solid #3b82f6;
+    border-bottom: 2px solid #3b82f6;
+    border-left: none; /* Remove vertical borders from mobile */
+    border-right: none;
+  }
+}
+
+@keyframes driveHorizontalBridge {
+  from { background-position: 0 0; }
+  to { background-position: 30px 0; }
+}
+
+
+/* ==========================================================================
+   4. INTERNAL VERTICAL ROADS (INSIDE CARDS)
+   ========================================================================== */
+
+.vertical-inner-road {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    to bottom,
+    #334155 0px,
+    #334155 20px,
+    #ffffff 20px,
+    #ffffff 40px
+  );
+  background-size: 100% 40px;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.stage-card.active .vertical-inner-road {
   opacity: 1;
-  animation: driveVertical 0.8s linear infinite;
+  animation: driveVertical 1s linear infinite;
 }
 
-/* Gray Rectangular Substages */
+@keyframes driveVertical {
+  from { background-position: 0 0; }
+  to { background-position: 0 40px; }
+}
+
+
+/* ==========================================================================
+   5. SUBSTAGES & UI ELEMENTS
+   ========================================================================== */
+
 .substage-card {
-  background: #cbd5e1; /* Darker Gray than parent */
+  background: #cbd5e1;
   border: 1px solid #94a3b8;
   border-radius: 6px;
   padding: 12px;
   margin: 10px 0;
-  margin-left: 10px; /* Offset from the vertical road */
   display: flex;
   flex-direction: column;
   gap: 5px;
   transition: transform 0.2s ease;
+  width: 100%;
 }
 
 .substage-card:hover {
@@ -316,184 +210,8 @@
   background: #dcfce7;
   border-left: 4px solid #22c55e;
 }
-/* The Gray Stage Box */
-.stage-card {
-  width: 320px;
-  background: #e2e8f0; 
-  border: 2px solid #94a3b8;
-  border-radius: 12px;
-  padding: 20px;
-  position: relative; /* Essential for absolute positioning of the road */
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s ease;
-  z-index: 1;
-}
 
-/* Vertical Road: Center Aligned */
-.vertical-inner-road {
-  position: absolute;
-  left: 50%; /* Moves to center */
-  top: 0;
-  bottom: 0;
-  width: 12px; /* Slightly wider for better visibility */
-  transform: translateX(-50%); /* Centers the 12px width perfectly */
-  background: repeating-linear-gradient(
-    to bottom,
-    #334155 0px,
-    #334155 20px,
-    #ffffff 20px,
-    #ffffff 40px
-  );
-  background-size: 100% 40px;
-  opacity: 0.15; /* Faint when inactive */
-  z-index: 0; /* Sits behind the text/content */
-}
-
-/* Animation triggered by .active class */
-.stage-card.active .vertical-inner-road {
-  opacity: 1;
-  animation: driveVertical 1s linear infinite;
-}
-
-@keyframes driveVertical {
-  from { background-position: 0 0; }
-  to { background-position: 0 40px; } /* Moves upward to downward */
-}
-
-/* Ensure content is readable over the moving road */
-.stage-content {
-  position: relative;
-  z-index: 2; /* Sits above the road */
-  background: rgba(226, 232, 240, 0.8); /* Slight frosting to keep text clear */
-  border-radius: 8px;
-  padding: 10px;
-}
-/* The background road line that spans the whole stage box */
-.vertical-main-road {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  transform: translateX(-50%);
-  background: #cbd5e1; /* Static gray when not active */
-  z-index: 0;
-}
-
-/* Specific animation for when a substage is active */
-.substage-card.active::before {
-  content: '';
-  position: absolute;
-  left: -12px; /* Adjust based on your layout to align with center road */
-  top: 0;
-  height: 100%;
-  width: 8px;
-  background: repeating-linear-gradient(
-    to bottom,
-    #3b82f6 0px,
-    #3b82f6 10px,
-    #ffffff 10px,
-    #ffffff 20px
-  );
-  background-size: 100% 20px;
-  animation: driveThrough 0.8s linear infinite;
-}
-
-@keyframes driveThrough {
-  from { background-position: 0 0; }
-  to { background-position: 0 20px; }
-}
-
-.date-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.65rem;
-  color: #64748b;
-  margin-top: 4px;
-  border-top: 1px dashed #cbd5e1;
-  padding-top: 4px;
-}
-@keyframes driveVertical {
-  from { background-position: 0 0; }
-  to { background-position: 0 40px; } /* Moves the dashed line downward */
-}
-/* The bridge between Stage 1 and Stage 2 */
-.stage-connector {
-  width: 100px;
-  height: 12px;
-  background: repeating-linear-gradient(
-    to right,
-    #334155 0px,
-    #334155 15px,
-    #cbd5e1 15px,
-    #cbd5e1 30px
-  );
-  background-size: 30px 100%;
-  transition: opacity 0.3s ease;
-}
-
-/* When Stage 1 is Active, this moves toward Stage 2 */
-.stage-connector.moving {
-  animation: driveToNextStage 0.8s linear infinite;
-  border-top: 2px solid #3b82f6; /* Optional blue highlight */
-  border-bottom: 2px solid #3b82f6;
-}
-
-@keyframes driveToNextStage {
-  from { background-position: 0 0; }
-  to { background-position: 30px 0; } /* Moves rightward */
-}
-/* Add a smooth slide-down animation for the dropdown */
-.substage-dropdown-container {
-  animation: slideDown 0.3s ease-out;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.vertical-main-road {
-  background: #e2e8f0; /* grey track */
-  width: 4px;
-  border-radius: 2px;
-}
-
-.vertical-progress-road {
-  background: #3b82f6; /* animated progress */
-  width: 4px;
-  border-radius: 2px;
-  transition: height 0.8s ease-in-out;
-}
-@keyframes driveVertical {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 20px; }
-}
-/* Vertical road specifically for the substage box */
-.substage-vertical-road {
-  position: absolute;
-  left: 10px; /* Positioned to the left side of the substage card */
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  background: repeating-linear-gradient(
-    to bottom,
-    #475569 0px,
-    #475569 10px,
-    #ffffff 10px,
-    #ffffff 20px
-  );
-  background-size: 100% 20px;
-  animation: driveSubstage 0.8s linear infinite;
-  opacity: 0.4;
-  z-index: 1;
-}
-
-@keyframes driveSubstage {
-  from { background-position: 0 0; }
-  to { background-position: 0 20px; } /* Downward movement */
-}
+/* Smooth Slide-down Animation for Substage lists */
 .substage-list {
   max-height: 0;
   overflow: hidden;
@@ -502,14 +220,22 @@
 }
 
 .stage-card.open .substage-list {
-  max-height: 1000px; /* High enough to fit all substages */
+  max-height: 2000px;
   opacity: 1;
 }
+
 input[type="date"] {
+  width: 100%; /* Ensures it fits inside mobile cards */
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: 20px; /* Pill shape */
-  padding: 5px 12px;
-  font-family: 'Courier New', monospace; /* Tech/Road vibe */
+  padding: 6px 12px;
+  font-family: 'Courier New', monospace;
   color: #334155;
+  outline: none;
+}
+
+input[type="date"]:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }

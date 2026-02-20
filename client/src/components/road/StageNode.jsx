@@ -185,11 +185,7 @@ const StageNode = ({ stage, isLast }) => {
       )}
 
       {/* --- Horizontal Road Connector --- */}
-      {!isLast && (
-        <div className={`transition-all duration-700 md:h-3 md:w-20 h-12 w-3 bg-[repeating-linear-gradient(to_right,#334155_0px,#334155_15px,#cbd5e1_15px,#cbd5e1_30px)]
-          ${isActive ? "md:animate-[driveHorizontal_0.8s_linear_infinite] opacity-100" : "opacity-20"}`} 
-        />
-      )}
+      
     </div>
   );
 };
