@@ -6,14 +6,23 @@ import './App.css';
 function App() {
   const [userEmail, setUserEmail] = useState("");
   const [tempEmail, setTempEmail] = useState("");
+  // NEW: State to store the plant name
+  const [plantName, setPlantName] = useState("");
+  const [tempPlantName, setTempPlantName] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = (e) => {
     e.preventDefault();
     const emailToValidate = tempEmail.toLowerCase().trim();
 
+    // Check if email is valid AND if they entered a plant name
     if (ACCESS_CONTROL.hasOwnProperty(emailToValidate)) {
+      if (!tempPlantName.trim()) {
+        setError("System Denied: Plant Name is required");
+        return;
+      }
       setUserEmail(emailToValidate);
+      setPlantName(tempPlantName.trim()); // Save the plant name
       setError("");
     } else {
       setError("System Denied: Unrecognized Department Email");
@@ -44,6 +53,23 @@ function App() {
             </div>
 
             <form onSubmit={handleLogin} className="space-y-5">
+              
+              {/* Plant Name Input */}
+              <div className="relative">
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-4 mb-1 block tracking-widest">
+                  Plant Name Identifier
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. SDL SIKRI"
+                  className="w-full p-4 bg-slate-100/50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-slate-700 placeholder:text-slate-300 uppercase"
+                  value={tempPlantName}
+                  onChange={(e) => setTempPlantName(e.target.value)}
+                />
+              </div>
+
+              {/* Email Input */}
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-4 mb-1 block tracking-widest">
                   Identity Verification
@@ -69,7 +95,7 @@ function App() {
 
               <button 
                 type="submit"
-                className="w-full py-4 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 group"
+                className="w-full py-4 mt-2 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 group"
               >
                 Authenticate
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
@@ -104,7 +130,9 @@ function App() {
       <div className="app-container min-h-screen bg-[#f8fafc]">
         {/* Navigation Header */}
         <header className="flex justify-between items-center px-8 py-5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] sticky top-0 z-50">
-          <div className="flex items-center gap-4">
+          
+          {/* Left: App Logo & Dept */}
+          <div className="flex items-center gap-4 w-1/3">
             <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl">P</div>
             <div>
               <h1 className="text-lg font-black text-slate-800 uppercase tracking-tight">Plant Tracker</h1>
@@ -115,13 +143,31 @@ function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="hidden md:block">
-              <p className="text-[9px] font-black text-slate-400 uppercase text-right">Operator ID</p>
+          {/* Center: Plant Name Display */}
+          <div className="w-1/3 flex justify-center text-center">
+            <div className="bg-blue-50 border border-blue-100 px-6 py-2 rounded-2xl shadow-sm">
+              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-0.5">
+                Active Facility
+              </p>
+              <h2 className="text-xl font-black text-blue-900 uppercase tracking-tight">
+                {plantName}
+              </h2>
+            </div>
+          </div>
+
+          {/* Right: User Info & Logout */}
+          <div className="flex items-center justify-end gap-6 w-1/3">
+            <div className="hidden md:block text-right">
+              <p className="text-[9px] font-black text-slate-400 uppercase">Operator ID</p>
               <p className="text-xs font-bold text-slate-700">{userEmail}</p>
             </div>
             <button 
-              onClick={() => setUserEmail("")}
+              onClick={() => {
+                setUserEmail("");
+                setTempEmail("");
+                setPlantName("");
+                setTempPlantName("");
+              }}
               className="px-4 py-2 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 border border-red-100 hover:border-red-500"
             >
               Log Out
