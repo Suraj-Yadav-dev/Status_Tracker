@@ -1,10 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { stages as initialStages } from "../data/stageConfig";
 
+// 1. Define and EXPORT Access Control Mapping
+// Exporting this allows App.jsx to validate emails before entering the dashboard
+export const ACCESS_CONTROL = {
+  "hr_head@plant.com": "HR",
+  "quality_mgr@plant.com": "QR",
+  "finance_lead@plant.com": "Accounts",
+  "md_office@company.com": "ADMIN", // Full access for MD
+  "cs.ersurajyadav@gmail.com": "ADMIN" // Developer bypass
+};
+
 export const ProjectContext = createContext();
 
-export const ProjectProvider = ({ children, userEmail }) => {
-  // 1. Initialize State from LocalStorage or Default Config
+export const ProjectProvider = ({ children, userEmail, setUserEmail }) => {
+  // 2. Initialize State from LocalStorage or Default Config
   const [data, setData] = useState(() => {
     const saved = localStorage.getItem("plant_master_data");
     if (saved) return JSON.parse(saved);
@@ -15,7 +25,7 @@ export const ProjectProvider = ({ children, userEmail }) => {
       currentStatus: "Inactive",
       startDate: "",
       endDate: "",
-      lastUpdatedBy: "", // Track which department updated last
+      lastUpdatedBy: "", 
       substages: stage.substages.map((sub) => ({
         ...sub,
         currentStatus: "Inactive",
@@ -25,32 +35,39 @@ export const ProjectProvider = ({ children, userEmail }) => {
     }));
   });
 
-  // 2. Persist to LocalStorage whenever 'data' changes
+  // 3. Persist to LocalStorage whenever 'data' changes
   useEffect(() => {
     localStorage.setItem("plant_master_data", JSON.stringify(data));
   }, [data]);
 
   /* ================= AUTHORIZATION LOGIC ================= */
-  const canEdit = (departmentString) => {
-    if (!departmentString) return false;
-    const allowedDepartments = departmentString.split(",").map((d) => d.trim());
-    
-    // Super-user access
-    if (userEmail === "cs.ersurajyadav@gmail.com") return true;
+  const canEdit = (stageDepartment) => {
+    if (!userEmail) return false;
 
-    return allowedDepartments.some((dept) =>
-      userEmail?.toLowerCase().includes(dept.toLowerCase())
-    );
+    // Direct check from our exported mapping
+    const userDept = ACCESS_CONTROL[userEmail.toLowerCase().trim()];
+    
+    // If the user's assigned department is ADMIN, they can edit everything
+    if (userDept === "ADMIN") return true;
+
+    // Check if the user's department matches the stage's required department
+    // stageDepartment usually looks like "HR" or "QR, ADMIN"
+    return userDept && stageDepartment.includes(userDept);
   };
 
   /* ================= STATUS & DEPT UPDATE ================= */
-  // Added 'deptName' parameter to track who is saving the data
   const updateStatus = (stageId, substageId, newStatus, deptName = "System") => {
     setData((prev) =>
       prev.map((stage) => {
         if (stage.id !== stageId) return stage;
 
-        // If updating a main stage
+        // Final safety check: block update if user tampered with UI
+        if (!canEdit(stage.department)) {
+            console.error("Access Denied: Unauthorized department.");
+            alert("You do not have permission to update this department.");
+            return stage;
+        }
+
         if (substageId === null) {
           return { 
             ...stage, 
@@ -59,7 +76,6 @@ export const ProjectProvider = ({ children, userEmail }) => {
           };
         }
 
-        // If updating a substage
         const updatedSubs = stage.substages.map((sub) =>
           sub.id === substageId
             ? { ...sub, currentStatus: newStatus }
@@ -77,6 +93,9 @@ export const ProjectProvider = ({ children, userEmail }) => {
       prev.map((stage) => {
         if (stage.id !== stageId) return stage;
 
+        // Date updates also check permission
+        if (!canEdit(stage.department)) return stage;
+
         if (substageId === null) {
           return { ...stage, [field]: value };
         }
@@ -93,7 +112,6 @@ export const ProjectProvider = ({ children, userEmail }) => {
   };
 
   /* ================= DASHBOARD ANALYTICS ================= */
-  // This helper helps the MD see the overall health of the plant
   const getPlantStats = () => {
     const total = data.length;
     const completed = data.filter(s => s.currentStatus === "Completed").length;
@@ -106,17 +124,10 @@ export const ProjectProvider = ({ children, userEmail }) => {
     };
   };
 
-  /* ================= DEADLINE ALERT ================= */
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    data.forEach((stage) => {
-      stage.substages.forEach((sub) => {
-        if (sub.currentStatus !== "Completed" && sub.endDate && sub.endDate < today) {
-          console.warn(`ALERT: Task "${sub.name}" is past deadline!`);
-        }
-      });
-    });
-  }, [data]);
+  /* ================= LOGOUT HELPER ================= */
+  const logout = () => {
+    setUserEmail(""); // Resetting email triggers the login screen in App.jsx
+  };
 
   return (
     <ProjectContext.Provider
@@ -126,7 +137,8 @@ export const ProjectProvider = ({ children, userEmail }) => {
         updateDates,
         canEdit,
         userEmail,
-        getPlantStats, // New helper for MD dashboard
+        getPlantStats,
+        logout
       }}
     >
       {children}

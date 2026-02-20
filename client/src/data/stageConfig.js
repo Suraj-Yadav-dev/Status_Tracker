@@ -4,7 +4,7 @@ export const stages = [
     department:"MR,HR,QUALITY,ACCOUNTS,MARKETING",
     departmentId:"cs.ersuraj@gmail.com",
     name: "ENQUIRY",
-    staus:"Active, Inactive, Completed",
+    status:"Active, Inactive, Completed",
     startDate:"2024-01-01",
     endDate:"2024-01-15",
     substages: [
@@ -33,7 +33,7 @@ export const stages = [
     department:"MR,HR,QUALITY,ACCOUNTS,MARKETING",
     departmentId:"cs.ersuraj@gmail.com",
     name: "Manpower Arrangement",
-    staus:"Active, Inactive, Completed",
+    status:"Active, Inactive, Completed",
     startDate:"2024-01-31",
     endDate:"2024-02-15",
     
@@ -47,7 +47,7 @@ export const stages = [
     department:"MR,HR,QUALITY,ACCOUNTS,MARKETING",
     departmentId:"cs.ersuraj@gmail.com",
     name: "Requirement for Inspection",
-    staus:"Active, Inactive, Completed",
+    status:"Active, Inactive, Completed",
     startDate:"2024-02-16",
     endDate:"2024-02-28",
     substages: [
@@ -60,7 +60,7 @@ export const stages = [
     department:"MR,HR,QUALITY,ACCOUNTS,MARKETING",
     departmentId:"cs.ersuraj@gmail.com",
     name: "Inspection Scheduling",
-    staus:"Active, Inactive, Completed",
+    status:"Active, Inactive, Completed",
     startDate:"2024-03-01",
     endDate:"2024-03-15",
     substages: [
@@ -72,7 +72,7 @@ export const stages = [
     department:"MR,HR,QUALITY,ACCOUNTS,MARKETING",
     departmentId:"cs.ersuraj@gmail.com",
     name: "Ramp-Up",
-    staus:"Active, Inactive, Completed",
+    status:"Active, Inactive, Completed",
     startDate:"2024-03-16",
     endDate:"2024-04-15",
     substages: [
@@ -95,7 +95,7 @@ export const stages = [
     department:"MR,HR,QUALITY,ACCOUNTS,MARKETING",
     departmentId:"cs.ersuraj@gmail.com",
     name: "Inspection Execution",
-    staus:"Active, Inactive, Completed",
+    status:"Active, Inactive, Completed",
     startDate:"2024-04-16",
     endDate:"2024-05-15",
     substages: [

@@ -22,9 +22,19 @@ const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
         `}
       >
         <div className="relative z-20">
-          <h4 className="font-bold text-slate-800 text-sm mb-2 uppercase tracking-wide">
-            {sub.name}
-          </h4>
+          
+          {/* --- NEW: Title & Day Badge Container --- */}
+          <div className="flex justify-between items-start gap-2 mb-3">
+            <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">
+              {sub.name}
+            </h4>
+            {/* Renders the Day if it exists in your stageConfig.js */}
+            {sub.day && (
+              <span className="shrink-0 px-2 py-0.5 bg-white/70 text-slate-800 text-[10px] font-black rounded border border-black/10 shadow-sm whitespace-nowrap">
+                {sub.day}
+              </span>
+            )}
+          </div>
 
           {/* Date Row */}
           <div className="flex gap-2 mb-3">
@@ -32,21 +42,21 @@ const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
               type="date" 
               value={sub.startDate || ""} 
               onChange={(e) => updateDates(stageId, sub.id, 'startDate', e.target.value)}
-              className="w-full text-[10px] p-1.5 rounded border border-black/10 bg-white/60 outline-none focus:bg-white"
+              className="w-full text-[10px] p-1.5 rounded border border-black/10 bg-white/60 outline-none focus:bg-white transition-colors"
             />
             <input 
               type="date" 
               value={sub.endDate || ""} 
               onChange={(e) => updateDates(stageId, sub.id, 'endDate', e.target.value)}
-              className="w-full text-[10px] p-1.5 rounded border border-black/10 bg-white/60 outline-none focus:bg-white"
+              className="w-full text-[10px] p-1.5 rounded border border-black/10 bg-white/60 outline-none focus:bg-white transition-colors"
             />
           </div>
 
           {/* Status Dropdown */}
           <select 
-            value={sub.currentStatus} 
+            value={sub.currentStatus || "Inactive"} 
             onChange={(e) => updateStatus(stageId, sub.id, e.target.value)}
-            className="w-full p-2 text-xs font-bold rounded border border-black/10 bg-white cursor-pointer"
+            className="w-full p-2 text-xs font-bold rounded border border-black/10 bg-white cursor-pointer transition-colors focus:ring-2 focus:ring-blue-400 outline-none"
           >
             <option value="Inactive">🔴 Inactive</option>
             <option value="Active">🟡 Active</option>
@@ -57,7 +67,7 @@ const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
 
       {/* THE VERTICAL ROAD BETWEEN SUBSTAGES */}
       {!isLastSubstage && (
-        <div className="relative w-full flex justify-center py-4"> {/* py-4 creates the gap */}
+        <div className="relative w-full flex justify-center py-4">
           <div className={`
             w-2 h-10 rounded-full transition-all duration-500
             ${isActive 

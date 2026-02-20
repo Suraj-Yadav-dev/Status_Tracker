@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useProject } from "../../context/ProjectContext";
 import SubStageNode from "./SubStageNode";
 
 const StageNode = ({ stage, isLast }) => {
-  const { updateStatus, updateDates } = useProject();
+  const { updateStatus, updateDates, canEdit } = useProject();
   const [isOpen, setIsOpen] = useState(false);
   const [showUpdateBox, setShowUpdateBox] = useState(false);
+  
+  // Local state to track the department selected in the dropdown
+  const [tempDept, setTempDept] = useState(stage.lastUpdatedBy || "");
 
   const isActive = stage.currentStatus === "Active";
   const isCompleted = stage.currentStatus === "Completed";
+
+  // Check if the current logged-in user has permission to edit this stage
+  const hasPermission = canEdit(stage.department);
 
   return (
     <div className="flex flex-col md:flex-row items-center">
@@ -32,32 +38,52 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           </div>
 
-          {/* Status Badge */}
-          <div className="flex gap-2 mb-4">
-            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-              ${isActive ? "bg-yellow-100 text-yellow-700" : isCompleted ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+          {/* --- DATA DISPLAY SECTION (Always Visible for MD) --- */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Department:</span>
+              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                {stage.lastUpdatedBy || "Pending"}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Timeline:</span>
+              <span className="text-[11px] font-bold text-slate-700">
+                {stage.startDate ? `${stage.startDate} → ${stage.endDate}` : "Dates not set"}
+              </span>
+            </div>
+
+            <div className={`w-full py-1 text-center rounded-md text-[10px] font-black uppercase tracking-widest mt-1
+              ${isActive ? "bg-yellow-400 text-yellow-900" : isCompleted ? "bg-green-500 text-white" : "bg-slate-200 text-slate-500"}`}>
               {stage.currentStatus}
-            </span>
+            </div>
           </div>
 
-          {/* Update Button (Stops propagation so card doesn't close) */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowUpdateBox(true);
-            }}
-            className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-black tracking-widest transition-all shadow-md uppercase"
-          >
-            Update Data
-          </button>
+          {/* --- AUTHENTICATED UPDATE BUTTON --- */}
+          {hasPermission ? (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowUpdateBox(true);
+              }}
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-black tracking-widest transition-all shadow-md uppercase"
+            >
+              Update Data
+            </button>
+          ) : (
+            <div className="w-full py-2.5 bg-slate-100 text-slate-400 rounded-lg text-[10px] font-bold text-center border border-dashed border-slate-300 uppercase">
+              🔒 {stage.department} Access Only
+            </div>
+          )}
 
           {/* --- Substages List --- */}
           <div 
-            onClick={(e) => e.stopPropagation()} // Prevents closing card when interacting with substages
+            onClick={(e) => e.stopPropagation()} 
             className={`transition-all duration-500 overflow-hidden ${isOpen ? "mt-6 max-h-[2000px] opacity-100" : "max-h-0 opacity-0"}`}
           >
             <div className="border-t border-slate-100 pt-4 space-y-2">
-              {stage.substages.map((sub, index) => (
+              {stage.substages?.map((sub, index) => (
                 <SubStageNode 
                   key={sub.id} 
                   sub={sub} 
@@ -74,11 +100,11 @@ const StageNode = ({ stage, isLast }) => {
       {showUpdateBox && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => setShowUpdateBox(false)} // Close if clicking background
+          onClick={() => setShowUpdateBox(false)}
         >
           <div 
             className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in zoom-in duration-300"
-            onClick={(e) => e.stopPropagation()} // Prevents closing when clicking inside the box
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Sync Status</h2>
@@ -94,7 +120,11 @@ const StageNode = ({ stage, isLast }) => {
               {/* Department Selector */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Reporting Department</label>
-                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
+                <select 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={tempDept}
+                  onChange={(e) => setTempDept(e.target.value)}
+                >
                   <option value="">Select Department...</option>
                   <option value="HR">Human Resources (HR)</option>
                   <option value="QR">Quality & Reliability (QR)</option>
@@ -112,7 +142,7 @@ const StageNode = ({ stage, isLast }) => {
                     type="date" 
                     value={stage.startDate || ""} 
                     onChange={(e) => updateDates(stage.id, null, "startDate", e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold outline-none" 
                   />
                 </div>
                 <div>
@@ -121,7 +151,7 @@ const StageNode = ({ stage, isLast }) => {
                     type="date" 
                     value={stage.endDate || ""} 
                     onChange={(e) => updateDates(stage.id, null, "endDate", e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold outline-none" 
                   />
                 </div>
               </div>
@@ -131,8 +161,8 @@ const StageNode = ({ stage, isLast }) => {
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Update Progress</label>
                 <select 
                   value={stage.currentStatus} 
-                  onChange={(e) => updateStatus(stage.id, null, e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-xl font-bold bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                  onChange={(e) => updateStatus(stage.id, null, e.target.value, tempDept)}
+                  className="w-full p-3 border border-slate-200 rounded-xl font-bold bg-slate-50 outline-none"
                 >
                   <option value="Inactive">🔴 Inactive</option>
                   <option value="Active">🟡 Active</option>
@@ -141,8 +171,11 @@ const StageNode = ({ stage, isLast }) => {
               </div>
 
               <button 
-                onClick={() => setShowUpdateBox(false)}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-100 transition-all active:scale-95"
+                onClick={() => {
+                  updateStatus(stage.id, null, stage.currentStatus, tempDept);
+                  setShowUpdateBox(false);
+                }}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg transition-all"
               >
                 Save & Sync Data
               </button>
@@ -151,14 +184,9 @@ const StageNode = ({ stage, isLast }) => {
         </div>
       )}
 
-      {/* --- Horizontal Road Connector (Between Stages) --- */}
+      {/* --- Horizontal Road Connector --- */}
       {!isLast && (
-        <div className={`transition-all duration-700
-          /* Desktop */
-          md:h-3 md:w-20 
-          /* Mobile */
-          h-12 w-3
-          bg-[repeating-linear-gradient(to_right,#334155_0px,#334155_15px,#cbd5e1_15px,#cbd5e1_30px)]
+        <div className={`transition-all duration-700 md:h-3 md:w-20 h-12 w-3 bg-[repeating-linear-gradient(to_right,#334155_0px,#334155_15px,#cbd5e1_15px,#cbd5e1_30px)]
           ${isActive ? "md:animate-[driveHorizontal_0.8s_linear_infinite] opacity-100" : "opacity-20"}`} 
         />
       )}
