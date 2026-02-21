@@ -3,10 +3,41 @@ import RoadContainer from './components/road/RoadContainer';
 import { ProjectProvider, ACCESS_CONTROL } from './context/ProjectContext'; 
 import './App.css';
 
+// Define your list of plants here
+const PLANT_LIST = [
+  "SDL SIKRI",
+  "VAPL SIKRI-2",
+  "SHANKAR FORGE",
+  "RICO BAWAL",
+  "SUNBEAM TAPUKHERA",
+  "POLYPLASTIC-BHIWADI",
+  "BHUNIT PALWAL",
+  "VICTORA DHATIR",
+  "SKH MANESER PLANT 2",
+  "VAPL BAWAL-1",
+  "MATJET",
+  "CUTTING EDGE DHATIR",
+  "VICTORA BAWAL",
+  "BHAGWATI TECHNO",
+  "NIROTECH",
+  "SKH-1",
+  "SATA VIKAS",
+  "MT AUTOCRAFT ROHTAK",
+  "SUNBEAM BAWAL",
+  "KML",
+  "POLYPLASTIC-TAMIL NAIDU",
+  "VAPL PRITHLA",
+  "VAPL PATHREDI",
+  "VAPL DHATIR B.O.P",
+  "VIBRO CAUSTIC",
+  "NOIDA GLOBAL",
+  "SKH-4",
+  "PANCHKULA STEEL"
+];
+
 function App() {
   const [userEmail, setUserEmail] = useState("");
   const [tempEmail, setTempEmail] = useState("");
-  // NEW: State to store the plant name
   const [plantName, setPlantName] = useState("");
   const [tempPlantName, setTempPlantName] = useState("");
   const [error, setError] = useState("");
@@ -15,18 +46,25 @@ function App() {
     e.preventDefault();
     const emailToValidate = tempEmail.toLowerCase().trim();
 
-    // Check if email is valid AND if they entered a plant name
+    // Check if email is valid AND if they selected a plant
     if (ACCESS_CONTROL.hasOwnProperty(emailToValidate)) {
       if (!tempPlantName.trim()) {
-        setError("System Denied: Plant Name is required");
+        setError("System Denied: Please select a Plant");
         return;
       }
       setUserEmail(emailToValidate);
-      setPlantName(tempPlantName.trim()); // Save the plant name
+      setPlantName(tempPlantName.trim()); 
       setError("");
     } else {
       setError("System Denied: Unrecognized Department Email");
     }
+  };
+
+  const handleLogout = () => {
+    setUserEmail("");
+    setTempEmail("");
+    setPlantName("");
+    setTempPlantName("");
   };
 
   if (!userEmail) {
@@ -42,45 +80,56 @@ function App() {
             {/* Logo Section */}
             <div className="text-center mb-10">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200 mb-6 rotate-3 hover:rotate-0 transition-transform duration-300">
-                <span className="text-white text-3xl font-black">P</span>
+                <span className="text-white text-3xl font-black">KP</span>
               </div>
               <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-                Plant Central
+                Reliable Technique
               </h1>
               <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-3">
-                Master Control Dashboard
+                India Private Limited
               </p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-5">
               
-              {/* Plant Name Input */}
+              {/* Plant Selection Dropdown */}
               <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-4 mb-1 block tracking-widest">
-                  Plant Name Identifier
+                <label className="text-[10px] font-black text-blue-400 uppercase ml-4 mb-1 block tracking-widest">
+                  Plant Selection
                 </label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. SDL SIKRI"
-                  className="w-full p-4 bg-slate-100/50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-slate-700 placeholder:text-slate-300 uppercase"
-                  value={tempPlantName}
-                  onChange={(e) => setTempPlantName(e.target.value)}
-                />
+                <div className="relative">
+                  <select 
+                    required
+                    className="w-full p-4 bg-slate-100/50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-slate-700 uppercase appearance-none cursor-pointer"
+                    value={tempPlantName}
+                    onChange={(e) => setTempPlantName(e.target.value)}
+                  >
+                    <option value="" disabled>-- Select Plant --</option>
+                    {PLANT_LIST.map((plant) => (
+                      <option key={plant} value={plant}>
+                        {plant}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Custom Arrow Icon */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    ▼
+                  </div>
+                </div>
               </div>
 
               {/* Email Input */}
               <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-4 mb-1 block tracking-widest">
+                <label className="text-[10px] font-black text-blue-400 uppercase ml-4 mb-1 block tracking-widest">
                   Identity Verification
                 </label>
                 <input 
                   type="email" 
                   required
                   placeholder="department@plant.com"
-                  className={`w-full p-4 bg-slate-100/50 border-2 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-slate-700 placeholder:text-slate-300 ${
-                    error ? 'border-red-400 bg-red-50' : 'border-transparent focus:border-blue-500'
-                  }`}
+className={`w-full p-4 bg-slate-100/50 border-2 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-slate-700 placeholder:text-slate-300 ${
+  error ? 'border-red-400 bg-red-50' : 'border-slate-300 focus:border-blue-500'
+}`}
                   value={tempEmail}
                   onChange={(e) => setTempEmail(e.target.value)}
                 />
@@ -126,7 +175,8 @@ function App() {
   }
 
   return (
-    <ProjectProvider userEmail={userEmail} setUserEmail={setUserEmail}>
+    // Pass plantName to the provider so it loads the correct data
+    <ProjectProvider userEmail={userEmail} setUserEmail={setUserEmail} plantName={plantName}>
       <div className="app-container min-h-screen bg-[#f8fafc]">
         {/* Navigation Header */}
         <header className="flex justify-between items-center px-8 py-5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)] sticky top-0 z-50">
@@ -162,12 +212,7 @@ function App() {
               <p className="text-xs font-bold text-slate-700">{userEmail}</p>
             </div>
             <button 
-              onClick={() => {
-                setUserEmail("");
-                setTempEmail("");
-                setPlantName("");
-                setTempPlantName("");
-              }}
+              onClick={handleLogout}
               className="px-4 py-2 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 border border-red-100 hover:border-red-500"
             >
               Log Out

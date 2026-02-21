@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { stages as initialStages } from "../data/stageConfig";
 
 // 1. Define and EXPORT Access Control Mapping
-// Exporting this allows App.jsx to validate emails before entering the dashboard
 export const ACCESS_CONTROL = {
   "hr_head@plant.com": "HR",
   "quality_mgr@plant.com": "QR",
@@ -13,13 +12,21 @@ export const ACCESS_CONTROL = {
 
 export const ProjectContext = createContext();
 
-export const ProjectProvider = ({ children, userEmail, setUserEmail }) => {
-  // 2. Initialize State from LocalStorage or Default Config
+// Added plantName to props
+export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }) => {
+  
+  // Create a unique key for LocalStorage based on the selected plant
+  // Example: "plant_data_SDL_SIKRI"
+  const STORAGE_KEY = plantName 
+    ? `plant_data_${plantName.replace(/\s+/g, '_')}` 
+    : "plant_master_data_default";
+
+  // 2. Initialize State from LocalStorage using the UNIQUE KEY
   const [data, setData] = useState(() => {
-    const saved = localStorage.getItem("plant_master_data");
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
 
-    // Default structure if no saved data exists
+    // Default structure if no saved data exists for THIS SPECIFIC PLANT
     return initialStages.map((stage) => ({
       ...stage,
       currentStatus: "Inactive",
@@ -35,10 +42,12 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail }) => {
     }));
   });
 
-  // 3. Persist to LocalStorage whenever 'data' changes
+  // 3. Persist to LocalStorage using the UNIQUE KEY whenever 'data' changes
   useEffect(() => {
-    localStorage.setItem("plant_master_data", JSON.stringify(data));
-  }, [data]);
+    if (plantName) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+  }, [data, STORAGE_KEY, plantName]);
 
   /* ================= AUTHORIZATION LOGIC ================= */
   const canEdit = (stageDepartment) => {
@@ -61,7 +70,6 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail }) => {
       prev.map((stage) => {
         if (stage.id !== stageId) return stage;
 
-        // Final safety check: block update if user tampered with UI
         if (!canEdit(stage.department)) {
             console.error("Access Denied: Unauthorized department.");
             alert("You do not have permission to update this department.");
@@ -93,7 +101,6 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail }) => {
       prev.map((stage) => {
         if (stage.id !== stageId) return stage;
 
-        // Date updates also check permission
         if (!canEdit(stage.department)) return stage;
 
         if (substageId === null) {
@@ -126,7 +133,10 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail }) => {
 
   /* ================= LOGOUT HELPER ================= */
   const logout = () => {
-    setUserEmail(""); // Resetting email triggers the login screen in App.jsx
+    setUserEmail(""); 
+    // We don't need to manually clear 'data' here because 
+    // when the user logs back in with a different plant, 
+    // the STORAGE_KEY will change and load that plant's data.
   };
 
   return (
