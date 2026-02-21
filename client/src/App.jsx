@@ -79,8 +79,12 @@ function App() {
             
             {/* Logo Section */}
             <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200 mb-6 rotate-3 hover:rotate-0 transition-transform duration-300">
-                <span className="text-white text-3xl font-black">KP</span>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg shadow-blue-200 mb-6 rotate-3 hover:rotate-0 transition-transform duration-300 overflow-hidden">
+                <img 
+                  src="/kp.jpg" 
+                  alt="KP Logo" 
+                  className="w-full h-full object-contain" 
+                />
               </div>
               <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 Reliable Technique
