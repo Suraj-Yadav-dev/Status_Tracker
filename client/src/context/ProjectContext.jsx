@@ -3,11 +3,15 @@ import { stages as initialStages } from "../data/stageConfig";
 
 // 1. Define and EXPORT Access Control Mapping
 export const ACCESS_CONTROL = {
-  "hr_head@plant.com": "HR",
-  "quality_mgr@plant.com": "QR",
-  "finance_lead@plant.com": "Accounts",
-  "md_office@company.com": "ADMIN", // Full access for MD
-  "cs.ersurajyadav@gmail.com": "ADMIN" // Developer bypass
+  "marketing@reliable-aes.in": "MR",
+  "kprtmarketing@reliable-aes.in":"MARKETING",
+  "finance@reliable-aes.in":"ADMIN", // Full access for Finance
+  "kandpal@reliable-aes.in":"",
+   // Full access for MD
+  "quality@reliable-aes.in":"QUALITY" ,
+  "qarj@reliable-aes.in":"QUALITY",
+  "accounts.raes@reliable-aes.in":"ACCOUNTS",
+  "hr1@reliable-aes.in":"HR",
 };
 
 export const ProjectContext = createContext();

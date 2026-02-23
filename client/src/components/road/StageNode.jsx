@@ -7,14 +7,36 @@ const StageNode = ({ stage, isLast }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showUpdateBox, setShowUpdateBox] = useState(false);
   
-  // Local state to track the department selected in the dropdown
+  // Validation State
+  const [validationError, setValidationError] = useState("");
+
   const [tempDept, setTempDept] = useState(stage.lastUpdatedBy || "");
 
   const isActive = stage.currentStatus === "Active";
   const isCompleted = stage.currentStatus === "Completed";
-
-  // Check if the current logged-in user has permission to edit this stage
   const hasPermission = canEdit(stage.department);
+
+  // --- NEW: Validation Function ---
+  const handleSave = () => {
+    // Reset error
+    setValidationError("");
+
+    // If trying to set to 'Completed'
+    if (stage.currentStatus === "Completed") {
+      if (!tempDept) {
+        setValidationError("Please select a Department before completing.");
+        return;
+      }
+      if (!stage.startDate || !stage.endDate) {
+        setValidationError("Start and End dates are required to complete this stage.");
+        return;
+      }
+    }
+
+    // If validation passes, proceed with sync
+    updateStatus(stage.id, null, stage.currentStatus, tempDept);
+    setShowUpdateBox(false);
+  };
 
   return (
     <div className="flex flex-col md:flex-row items-center">
@@ -25,6 +47,7 @@ const StageNode = ({ stage, isLast }) => {
         ${isActive ? "ring-4 ring-yellow-400/20 border-yellow-500 shadow-xl scale-[1.02]" : "hover:border-slate-300"}`}
         onClick={() => setIsOpen(!isOpen)}
       >
+        {/* ... existing data display section ... */}
         <div className="relative z-10">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-extrabold text-slate-800 tracking-tight uppercase leading-tight">
@@ -38,7 +61,7 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           </div>
 
-          {/* --- DATA DISPLAY SECTION (Always Visible for MD) --- */}
+          {/* Render standard info UI as before */}
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4 space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-bold text-slate-400 uppercase">Department:</span>
@@ -60,7 +83,6 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           </div>
 
-          {/* --- AUTHENTICATED UPDATE BUTTON --- */}
           {hasPermission ? (
             <button 
               onClick={(e) => {
@@ -77,7 +99,7 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           )}
 
-          {/* --- Substages List --- */}
+          {/* Substages List */}
           <div 
             onClick={(e) => e.stopPropagation()} 
             className={`transition-all duration-500 overflow-hidden ${isOpen ? "mt-6 max-h-[2000px] opacity-100" : "max-h-0 opacity-0"}`}
@@ -100,7 +122,7 @@ const StageNode = ({ stage, isLast }) => {
       {showUpdateBox && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => setShowUpdateBox(false)}
+          onClick={() => { setShowUpdateBox(false); setValidationError(""); }}
         >
           <div 
             className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in zoom-in duration-300"
@@ -109,19 +131,27 @@ const StageNode = ({ stage, isLast }) => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Sync Status</h2>
               <button 
-                onClick={() => setShowUpdateBox(false)} 
+                onClick={() => { setShowUpdateBox(false); setValidationError(""); }} 
                 className="text-slate-300 hover:text-red-500 text-3xl transition-colors"
               >
                 &times;
               </button>
             </div>
             
+            {/* Display Immediate Validation Error */}
+            {validationError && (
+              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-bold rounded animate-bounce">
+                ⚠️ {validationError}
+              </div>
+            )}
+
             <div className="space-y-6">
               {/* Department Selector */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Reporting Department</label>
                 <select 
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                  className={`w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none
+                  ${validationError && !tempDept ? "border-red-500 bg-red-50" : "border-slate-200"}`}
                   value={tempDept}
                   onChange={(e) => setTempDept(e.target.value)}
                 >
@@ -142,7 +172,8 @@ const StageNode = ({ stage, isLast }) => {
                     type="date" 
                     value={stage.startDate || ""} 
                     onChange={(e) => updateDates(stage.id, null, "startDate", e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold outline-none" 
+                    className={`w-full p-3 border rounded-xl text-sm font-semibold outline-none
+                    ${validationError && !stage.startDate ? "border-red-500" : "border-slate-200"}`} 
                   />
                 </div>
                 <div>
@@ -151,7 +182,8 @@ const StageNode = ({ stage, isLast }) => {
                     type="date" 
                     value={stage.endDate || ""} 
                     onChange={(e) => updateDates(stage.id, null, "endDate", e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold outline-none" 
+                    className={`w-full p-3 border rounded-xl text-sm font-semibold outline-none
+                    ${validationError && !stage.endDate ? "border-red-500" : "border-slate-200"}`} 
                   />
                 </div>
               </div>
@@ -171,10 +203,7 @@ const StageNode = ({ stage, isLast }) => {
               </div>
 
               <button 
-                onClick={() => {
-                  updateStatus(stage.id, null, stage.currentStatus, tempDept);
-                  setShowUpdateBox(false);
-                }}
+                onClick={handleSave}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg transition-all"
               >
                 Save & Sync Data
@@ -183,9 +212,6 @@ const StageNode = ({ stage, isLast }) => {
           </div>
         </div>
       )}
-
-      {/* --- Horizontal Road Connector --- */}
-      
     </div>
   );
 };

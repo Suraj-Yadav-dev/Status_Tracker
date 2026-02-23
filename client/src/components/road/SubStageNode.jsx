@@ -61,6 +61,7 @@ const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
             <option value="Inactive">🔴 Inactive</option>
             <option value="Active">🟡 Active</option>
             <option value="Completed">🟢 Completed</option>
+            <option value="">Null</option>
           </select>
         </div>
       </div>

@@ -32,7 +32,8 @@ const PLANT_LIST = [
   "VIBRO CAUSTIC",
   "NOIDA GLOBAL",
   "SKH-4",
-  "PANCHKULA STEEL"
+  "PANCHKULA STEEL",
+  "JRG"
 ];
 
 function App() {
