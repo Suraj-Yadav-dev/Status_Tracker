@@ -6,7 +6,7 @@ export const stages = [
     name: "ENQUIRY",
     totaldays: 3,
     status: "Active, Inactive, Completed",
-    startDate: "2026-02-24", // Anchor Date
+    startDate: "2026-02-21", // Anchor Date
     endDate: "",
     targetStartDate: "2026-02-24",
     targetEndDate: "2026-02-26",
