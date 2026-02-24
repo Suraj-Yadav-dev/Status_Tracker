@@ -2,6 +2,20 @@ import React, { useState } from "react";
 import { useProject } from "../../context/ProjectContext";
 import SubStageNode from "./SubStageNode";
 
+// Helper function to extract the number from "DAY 2.5"
+const extractDayNumber = (dayStr) => {
+  if (!dayStr) return 0;
+  return parseFloat(dayStr.replace(/[^\d.]/g, ""));
+};
+
+// Helper function to add days to a date string (YYYY-MM-DD)
+const addDaysToDate = (dateString, daysToAdd) => {
+  const date = new Date(dateString);
+  // Math.ceil handles partial days like "2.5" by rounding up to 3 for standard date logic
+  date.setDate(date.getDate() + Math.ceil(daysToAdd));
+  return date.toISOString().split("T")[0];
+};
+
 const StageNode = ({ stage, isLast }) => {
   const { updateStatus, updateDates, canEdit } = useProject();
   const [isOpen, setIsOpen] = useState(false);
@@ -9,19 +23,17 @@ const StageNode = ({ stage, isLast }) => {
   
   // Validation State
   const [validationError, setValidationError] = useState("");
-
   const [tempDept, setTempDept] = useState(stage.lastUpdatedBy || "");
 
   const isActive = stage.currentStatus === "Active";
   const isCompleted = stage.currentStatus === "Completed";
   const hasPermission = canEdit(stage.department);
 
-  // --- NEW: Validation Function ---
+  // --- ENHANCED: Validation Function ---
   const handleSave = () => {
-    // Reset error
     setValidationError("");
 
-    // If trying to set to 'Completed'
+    // 1. Basic Validation for Completion
     if (stage.currentStatus === "Completed") {
       if (!tempDept) {
         setValidationError("Please select a Department before completing.");
@@ -33,7 +45,28 @@ const StageNode = ({ stage, isLast }) => {
       }
     }
 
-    // If validation passes, proceed with sync
+    // 2. 17-Day Timeline Validation
+    if (stage.startDate && stage.substages && stage.substages.length > 0) {
+      // Find the starting "DAY" of this specific stage
+      const stageBaseDay = Math.min(...stage.substages.map(s => extractDayNumber(s.day)));
+
+      for (let i = 0; i < stage.substages.length; i++) {
+        const sub = stage.substages[i];
+        const subDayNum = extractDayNumber(sub.day);
+        
+        // Calculate the difference in days from the start of the stage
+        const dayOffset = subDayNum - stageBaseDay; 
+        const expectedDate = addDaysToDate(stage.startDate, dayOffset);
+
+        // If a substage start date has been entered, validate it
+        if (sub.startDate && sub.startDate !== expectedDate) {
+          setValidationError(`Timeline Error: "${sub.name}" is scheduled for ${sub.day}. Based on the Stage Start Date (${stage.startDate}), it should start on ${expectedDate}.`);
+          return; // Stop the save
+        }
+      }
+    }
+
+    // If all validations pass, proceed with sync
     updateStatus(stage.id, null, stage.currentStatus, tempDept);
     setShowUpdateBox(false);
   };
@@ -47,7 +80,6 @@ const StageNode = ({ stage, isLast }) => {
         ${isActive ? "ring-4 ring-yellow-400/20 border-yellow-500 shadow-xl scale-[1.02]" : "hover:border-slate-300"}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        {/* ... existing data display section ... */}
         <div className="relative z-10">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-extrabold text-slate-800 tracking-tight uppercase leading-tight">
@@ -61,7 +93,6 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           </div>
 
-          {/* Render standard info UI as before */}
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4 space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-bold text-slate-400 uppercase">Department:</span>
