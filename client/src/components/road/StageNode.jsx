@@ -14,6 +14,52 @@ const StageNode = ({ stage, isLast }) => {
   const isCompleted = stage.currentStatus === "Completed";
   const hasPermission = canEdit(stage.department);
 
+  // --- NEW: STAGE VALIDATION LOGIC ---
+  const validateStageDates = () => {
+    if (!stage.startDate && !stage.endDate) return { hasError: false };
+
+    const start = stage.startDate ? new Date(stage.startDate) : null;
+    const end = stage.endDate ? new Date(stage.endDate) : null;
+    const targetStart = stage.targetStartDate ? new Date(stage.targetStartDate) : null;
+    const targetEnd = stage.targetEndDate ? new Date(stage.targetEndDate) : null;
+
+    // 1. Guard against impossible date ranges (End before Start)
+    if (start && end && end < start) {
+      return { 
+        hasError: true, 
+        type: "INVALID", 
+        message: "End date is before Start date" 
+      };
+    }
+
+    // 2. Check if the Stage is DELAYED in COMPLETION
+    if (end && targetEnd && end > targetEnd) {
+      const diffTime = end.getTime() - targetEnd.getTime();
+      const delayDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return {
+        hasError: true,
+        type: "DELAY",
+        message: `Delayed by ${delayDays} day${delayDays > 1 ? 's' : ''}`
+      };
+    }
+
+    // 3. Check if the Stage is DELAYED in STARTING (if not ended yet)
+    if (start && targetStart && start > targetStart && !end) {
+      const diffTime = start.getTime() - targetStart.getTime();
+      const delayDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return {
+        hasError: true,
+        type: "DELAY",
+        message: `Started late by ${delayDays} day${delayDays > 1 ? 's' : ''}`
+      };
+    }
+
+    return { hasError: false };
+  };
+
+  const validation = validateStageDates();
+  // -----------------------------------
+
   const handleSave = () => {
     setValidationError("");
 
@@ -36,8 +82,10 @@ const StageNode = ({ stage, isLast }) => {
     <div className="flex flex-col md:flex-row items-center">
       <div
         className={`relative w-full md:w-80 p-6 rounded-2xl border-2 transition-all duration-300 shadow-lg cursor-pointer
-        ${isCompleted ? "bg-green-50 border-green-500" : "bg-white border-slate-200"}
-        ${isActive ? "ring-4 ring-yellow-400/20 border-yellow-500 shadow-xl scale-[1.02]" : "hover:border-slate-300"}`}
+        ${validation.hasError ? "border-red-600 bg-red-50/30" : isCompleted ? "bg-green-50 border-green-500" : "bg-white border-slate-200"}
+        ${isActive && !validation.hasError ? "ring-4 ring-yellow-400/20 border-yellow-500 shadow-xl scale-[1.02]" : ""}
+        ${!isActive && !validation.hasError ? "hover:border-slate-300" : ""}
+        `}
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="relative z-10">
@@ -53,9 +101,19 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           </div>
 
+          {/* --- NEW: DYNAMIC ALERT UI FOR STAGE --- */}
+          {validation.hasError && (
+            <div className="mb-4 p-2.5 bg-red-600 text-white text-[10px] font-bold rounded-lg animate-pulse flex items-center justify-between shadow-md">
+              <span>
+                {validation.type === "DELAY" ? "⚠️ STAGE DELAY" : "⚠️ DATE ERROR"}
+              </span>
+              <span>{validation.message}</span>
+            </div>
+          )}
+
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4 space-y-2">
             
-            {/* --- HARDCODED TARGET TIMELINE DISPLAY --- */}
+            {/* HARDCODED TARGET TIMELINE DISPLAY */}
             {stage.targetStartDate && stage.targetEndDate && (
               <div className="flex flex-col mb-2 p-2 bg-blue-50 border border-blue-100 rounded text-center">
                 <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1">🎯 Target Timeline</span>
@@ -67,7 +125,7 @@ const StageNode = ({ stage, isLast }) => {
 
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-bold text-slate-400 uppercase">Actual Timeline:</span>
-              <span className="text-[11px] font-bold text-slate-700">
+              <span className={`text-[11px] font-bold ${validation.hasError ? "text-red-600" : "text-slate-700"}`}>
                 {stage.startDate ? `${stage.startDate} → ${stage.endDate || "TBD"}` : "Not Started"}
               </span>
             </div>
@@ -113,7 +171,7 @@ const StageNode = ({ stage, isLast }) => {
         </div>
       </div>
 
-      {/* --- Central Update Modal (UNCHANGED) --- */}
+      {/* --- Central Update Modal --- */}
       {showUpdateBox && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
