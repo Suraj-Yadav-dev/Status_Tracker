@@ -151,9 +151,13 @@ function App() {
           {/* Left: Logo & Live Indicator */}
           <div className="flex items-center justify-between w-full md:w-1/3">
             <div className="flex items-center gap-3 sm:gap-4 group cursor-default">
-              {/* Upgraded Logo Box */}
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-slate-200 border border-slate-700 group-hover:scale-105 transition-transform">
-                P
+{/* Upgraded Logo Box */}
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200 border border-slate-200 group-hover:scale-105 transition-transform overflow-hidden p-1">
+                <img 
+                  src="/kp.jpg" 
+                  alt="KP Logo" 
+                  className="w-full h-full object-contain" 
+                />
               </div>
               <div>
                 <h1 className="text-base sm:text-lg font-black text-slate-800 uppercase tracking-tight leading-tight">
