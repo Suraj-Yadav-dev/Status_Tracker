@@ -2,26 +2,11 @@ import React, { useState } from "react";
 import { useProject } from "../../context/ProjectContext";
 import SubStageNode from "./SubStageNode";
 
-// Helper function to extract the number from "DAY 2.5"
-const extractDayNumber = (dayStr) => {
-  if (!dayStr) return 0;
-  return parseFloat(dayStr.replace(/[^\d.]/g, ""));
-};
-
-// Helper function to add days to a date string (YYYY-MM-DD)
-const addDaysToDate = (dateString, daysToAdd) => {
-  const date = new Date(dateString);
-  // Math.ceil handles partial days like "2.5" by rounding up to 3 for standard date logic
-  date.setDate(date.getDate() + Math.ceil(daysToAdd));
-  return date.toISOString().split("T")[0];
-};
-
 const StageNode = ({ stage, isLast }) => {
   const { updateStatus, updateDates, canEdit } = useProject();
   const [isOpen, setIsOpen] = useState(false);
   const [showUpdateBox, setShowUpdateBox] = useState(false);
   
-  // Validation State
   const [validationError, setValidationError] = useState("");
   const [tempDept, setTempDept] = useState(stage.lastUpdatedBy || "");
 
@@ -29,11 +14,9 @@ const StageNode = ({ stage, isLast }) => {
   const isCompleted = stage.currentStatus === "Completed";
   const hasPermission = canEdit(stage.department);
 
-  // --- ENHANCED: Validation Function ---
   const handleSave = () => {
     setValidationError("");
 
-    // 1. Basic Validation for Completion
     if (stage.currentStatus === "Completed") {
       if (!tempDept) {
         setValidationError("Please select a Department before completing.");
@@ -45,35 +28,12 @@ const StageNode = ({ stage, isLast }) => {
       }
     }
 
-    // 2. 17-Day Timeline Validation
-    if (stage.startDate && stage.substages && stage.substages.length > 0) {
-      // Find the starting "DAY" of this specific stage
-      const stageBaseDay = Math.min(...stage.substages.map(s => extractDayNumber(s.day)));
-
-      for (let i = 0; i < stage.substages.length; i++) {
-        const sub = stage.substages[i];
-        const subDayNum = extractDayNumber(sub.day);
-        
-        // Calculate the difference in days from the start of the stage
-        const dayOffset = subDayNum - stageBaseDay; 
-        const expectedDate = addDaysToDate(stage.startDate, dayOffset);
-
-        // If a substage start date has been entered, validate it
-        if (sub.startDate && sub.startDate !== expectedDate) {
-          setValidationError(`Timeline Error: "${sub.name}" is scheduled for ${sub.day}. Based on the Stage Start Date (${stage.startDate}), it should start on ${expectedDate}.`);
-          return; // Stop the save
-        }
-      }
-    }
-
-    // If all validations pass, proceed with sync
     updateStatus(stage.id, null, stage.currentStatus, tempDept);
     setShowUpdateBox(false);
   };
 
   return (
     <div className="flex flex-col md:flex-row items-center">
-      {/* --- Main Stage Card --- */}
       <div
         className={`relative w-full md:w-80 p-6 rounded-2xl border-2 transition-all duration-300 shadow-lg cursor-pointer
         ${isCompleted ? "bg-green-50 border-green-500" : "bg-white border-slate-200"}
@@ -94,17 +54,21 @@ const StageNode = ({ stage, isLast }) => {
           </div>
 
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4 space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Department:</span>
-              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                {stage.lastUpdatedBy || "Pending"}
-              </span>
-            </div>
             
+            {/* --- HARDCODED TARGET TIMELINE DISPLAY --- */}
+            {stage.targetStartDate && stage.targetEndDate && (
+              <div className="flex flex-col mb-2 p-2 bg-blue-50 border border-blue-100 rounded text-center">
+                <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1">🎯 Target Timeline</span>
+                <span className="text-xs font-bold text-blue-800">
+                  {stage.targetStartDate} to {stage.targetEndDate}
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Timeline:</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Actual Timeline:</span>
               <span className="text-[11px] font-bold text-slate-700">
-                {stage.startDate ? `${stage.startDate} → ${stage.endDate}` : "Dates not set"}
+                {stage.startDate ? `${stage.startDate} → ${stage.endDate || "TBD"}` : "Not Started"}
               </span>
             </div>
 
@@ -149,40 +113,32 @@ const StageNode = ({ stage, isLast }) => {
         </div>
       </div>
 
-      {/* --- Central Update Modal --- */}
+      {/* --- Central Update Modal (UNCHANGED) --- */}
       {showUpdateBox && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           onClick={() => { setShowUpdateBox(false); setValidationError(""); }}
         >
           <div 
-            className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 animate-in zoom-in duration-300"
+            className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Sync Status</h2>
-              <button 
-                onClick={() => { setShowUpdateBox(false); setValidationError(""); }} 
-                className="text-slate-300 hover:text-red-500 text-3xl transition-colors"
-              >
-                &times;
-              </button>
+              <button onClick={() => { setShowUpdateBox(false); setValidationError(""); }} className="text-slate-300 hover:text-red-500 text-3xl transition-colors">&times;</button>
             </div>
             
-            {/* Display Immediate Validation Error */}
             {validationError && (
-              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-bold rounded animate-bounce">
+              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-bold rounded">
                 ⚠️ {validationError}
               </div>
             )}
 
             <div className="space-y-6">
-              {/* Department Selector */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Reporting Department</label>
                 <select 
-                  className={`w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none
-                  ${validationError && !tempDept ? "border-red-500 bg-red-50" : "border-slate-200"}`}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none"
                   value={tempDept}
                   onChange={(e) => setTempDept(e.target.value)}
                 >
@@ -195,7 +151,6 @@ const StageNode = ({ stage, isLast }) => {
                 </select>
               </div>
 
-              {/* Date Inputs */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Start Date</label>
@@ -203,8 +158,7 @@ const StageNode = ({ stage, isLast }) => {
                     type="date" 
                     value={stage.startDate || ""} 
                     onChange={(e) => updateDates(stage.id, null, "startDate", e.target.value)}
-                    className={`w-full p-3 border rounded-xl text-sm font-semibold outline-none
-                    ${validationError && !stage.startDate ? "border-red-500" : "border-slate-200"}`} 
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold outline-none" 
                   />
                 </div>
                 <div>
@@ -213,13 +167,11 @@ const StageNode = ({ stage, isLast }) => {
                     type="date" 
                     value={stage.endDate || ""} 
                     onChange={(e) => updateDates(stage.id, null, "endDate", e.target.value)}
-                    className={`w-full p-3 border rounded-xl text-sm font-semibold outline-none
-                    ${validationError && !stage.endDate ? "border-red-500" : "border-slate-200"}`} 
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-semibold outline-none" 
                   />
                 </div>
               </div>
 
-              {/* Status Select */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Update Progress</label>
                 <select 

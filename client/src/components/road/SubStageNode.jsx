@@ -1,30 +1,60 @@
 import React from "react";
 import { useProject } from "../../context/ProjectContext";
 
-const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
+const SubStageNode = ({ sub, stageId, isLastSubstage, parentStage }) => {
   const { updateStatus, updateDates } = useProject();
 
-  // --- VALIDATION LOGIC ---
-  const calculateDelay = () => {
-    if (!sub.startDate || !sub.endDate || !sub.day) return null;
+  // --- UPGRADED VALIDATION LOGIC (UNCHANGED) ---
+  const validateDates = () => {
+    if (!sub.startDate || !sub.endDate) return { hasError: false };
 
     const start = new Date(sub.startDate);
     const end = new Date(sub.endDate);
-    
-    // Calculate difference in days
-    const diffTime = Math.abs(end - start);
-    const actualDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include the start day
 
-    // Extract number from "DAY 2.5" -> 2.5
-    const requiredDays = parseFloat(sub.day.replace(/[^\d.]/g, ""));
-
-    if (actualDays > requiredDays) {
-      return (actualDays - requiredDays).toFixed(1);
+    // 1. Guard against impossible date ranges (End before Start)
+    if (end < start) {
+      return { 
+        hasError: true, 
+        type: "INVALID", 
+        message: "End date is before Start date" 
+      };
     }
-    return null;
+
+    // 2. (Optional but recommended) Validate against Parent Stage boundaries
+    if (parentStage) {
+      const parentStart = new Date(parentStage.startDate);
+      const parentEnd = new Date(parentStage.endDate);
+      
+      if (start < parentStart || end > parentEnd) {
+        return {
+          hasError: true,
+          type: "OUT_OF_BOUNDS",
+          message: "Dates fall outside parent stage timeline"
+        };
+      }
+    }
+
+    // 3. Calculate Delay based on the 'day' string
+    if (sub.day) {
+      const diffTime = end.getTime() - start.getTime();
+      const actualDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+      
+      // Extract number from "DAY 2.5" -> 2.5
+      const requiredDays = parseFloat(sub.day.replace(/[^\d.]/g, ""));
+
+      if (actualDays > requiredDays) {
+        return {
+          hasError: true,
+          type: "DELAY",
+          message: `+${(actualDays - requiredDays).toFixed(1)} Days Over`
+        };
+      }
+    }
+
+    return { hasError: false };
   };
 
-  const delay = calculateDelay();
+  const validation = validateDates();
   // -------------------------
 
   const statusClasses = {
@@ -41,15 +71,24 @@ const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
         className={`
           relative w-full p-4 rounded-xl border-2 transition-all duration-300 z-10
           ${statusClasses[sub.currentStatus] || "bg-slate-100 border-slate-300"}
-          ${delay ? "border-red-600 ring-2 ring-red-300" : ""} 
+          ${validation.hasError ? "border-red-600 ring-2 ring-red-300" : ""} 
         `}
       >
         <div className="relative z-20">
           
           <div className="flex justify-between items-start gap-2 mb-3">
-            <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">
-              {sub.name}
-            </h4>
+            <div>
+              <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">
+                {sub.name}
+              </h4>
+              {/* --- NEW: HARDCODED TARGET DATE DISPLAY --- */}
+              {sub.targetDate && (
+                <div className="text-[10px] font-bold text-slate-500 mt-1">
+                  🎯 Expected By: <span className="text-blue-600 bg-blue-50 px-1 py-0.5 rounded">{sub.targetDate}</span>
+                </div>
+              )}
+            </div>
+            
             {sub.day && (
               <span className="shrink-0 px-2 py-0.5 bg-white/70 text-slate-800 text-[10px] font-black rounded border border-black/10 shadow-sm whitespace-nowrap">
                 {sub.day}
@@ -57,11 +96,13 @@ const SubStageNode = ({ sub, stageId, isLastSubstage }) => {
             )}
           </div>
 
-          {/* DELAY ALERT UI */}
-          {delay && (
+          {/* DYNAMIC ALERT UI */}
+          {validation.hasError && (
             <div className="mb-3 p-2 bg-red-600 text-white text-[10px] font-bold rounded animate-pulse flex items-center justify-between">
-              <span>⚠️ DELAY DETECTED</span>
-              <span>+{delay} Days Over</span>
+              <span>
+                {validation.type === "DELAY" ? "⚠️ DELAY DETECTED" : "⚠️ DATE ERROR"}
+              </span>
+              <span>{validation.message}</span>
             </div>
           )}
 
