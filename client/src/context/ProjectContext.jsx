@@ -5,7 +5,7 @@ import { stages as initialStages } from "../data/stageConfig";
 export const ACCESS_CONTROL = {
   "marketing@reliable-aes.in": "MR",
   "kprtmarketing@reliable-aes.in":"MARKETING",
-  "finance@reliable-aes.in":"ADMIN", // Full access for Finance
+  "finance@reliable-aes.in":"", // Full access for Finance
   "kandpal@reliable-aes.in":"",
    // Full access for MD
   "quality@reliable-aes.in":"QUALITY" ,
