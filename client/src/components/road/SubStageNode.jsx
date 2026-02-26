@@ -57,13 +57,21 @@ const SubStageNode = ({ sub, stageId, isLastSubstage, parentStage }) => {
   const validation = validateDates();
   // -------------------------
 
+  // --- UPDATED: Status Classes for 1.4 Options ---
   const statusClasses = {
+    // Standard Options
     Active: "bg-yellow-200 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]",
     Completed: "bg-green-200 border-green-500",
     Inactive: "bg-red-200 border-red-500 opacity-80",
+    Null: "bg-slate-200 border-slate-400 border-dashed opacity-60 text-slate-500",
+    
+    // 1.4 Specific Options
+    Accepted: "bg-emerald-200 border-emerald-600 text-emerald-900 shadow-[0_0_15px_rgba(16,185,129,0.3)]",
+    Rejected: "bg-rose-300 border-rose-600 text-rose-900",
+    OnHold: "bg-orange-200 border-orange-500 border-dashed text-orange-900 opacity-90",
   };
 
-  const isActive = sub.currentStatus === "Active";
+  const isActive = sub.currentStatus === "Active" || sub.currentStatus === "Accepted";
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -81,7 +89,7 @@ const SubStageNode = ({ sub, stageId, isLastSubstage, parentStage }) => {
               <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">
                 {sub.name}
               </h4>
-              {/* --- NEW: HARDCODED TARGET DATE DISPLAY --- */}
+              {/* --- HARDCODED TARGET DATE DISPLAY --- */}
               {sub.targetDate && (
                 <div className="text-[10px] font-bold text-slate-500 mt-1">
                   🎯 Expected By: <span className="text-blue-600 bg-blue-50 px-1 py-0.5 rounded">{sub.targetDate}</span>
@@ -132,10 +140,26 @@ const SubStageNode = ({ sub, stageId, isLastSubstage, parentStage }) => {
             onChange={(e) => updateStatus(stageId, sub.id, e.target.value)}
             className="w-full p-2 text-xs font-bold rounded border border-black/10 bg-white cursor-pointer transition-colors focus:ring-2 focus:ring-blue-400 outline-none"
           >
-            <option value="Inactive">🔴 Inactive</option>
-            <option value="Active">🟡 Active</option>
-            <option value="Completed">🟢 Completed</option>
-            <option value="">Null</option>
+            {sub.id === "1.4" ? (
+              // --- OPTIONS ONLY FOR 1.4 ---
+              <>
+                <option value="Inactive">🔴 Inactive</option>
+                <option value="Accepted">✅ Accepted</option>
+                <option value="Rejected">❌ Rejected</option>
+                <option value="OnHold">⏸️ On Hold</option>
+                <option value="Completed">✅ Completed</option>
+                <option value="Active">🟡 Active</option>
+                
+              </>
+            ) : (
+              // --- OPTIONS FOR ALL OTHER SUBSTAGES ---
+              <>
+                <option value="Inactive">🔴 Inactive</option>
+                <option value="Active">🟡 Active</option>
+                <option value="Completed">🟢 Completed</option>
+                <option value="Null">⚪ Null</option> 
+              </>
+            )}
           </select>
         </div>
       </div>
