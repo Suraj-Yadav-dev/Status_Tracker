@@ -204,8 +204,9 @@ const StageNode = ({ stage, isLast }) => {
                   <option value="HR">Human Resources (HR)</option>
                   <option value="QR">Quality & Reliability (QR)</option>
                   <option value="Accounts">Accounts/Finance</option>
-                  <option value="MR">Management Rep (MR)</option>
+                  <option value="MR">MARKETING </option>
                   <option value="Production">Production Team</option>
+                  
                 </select>
               </div>
 
