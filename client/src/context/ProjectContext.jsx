@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { stages as initialStages } from "../data/stageConfig";
 
-// 1. API Configuration
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY5dJF7sNHM6fr_XYKAX5LKkpMx8v1s-W2ktOXYt4hbmRdz7uCqXo2jkNjatlp6bTVsg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVoSWl2mzgMi1kHsmbMHKbR3qXZ095gh89SVY0FsuYFTQG9rzLp7rPmvW-bfcF2rvY4g/exec";
 
 export const ACCESS_CONTROL = {
   "marketing@reliable-aes.in": "MR",
@@ -18,7 +17,9 @@ export const ACCESS_CONTROL = {
 export const ProjectContext = createContext();
 
 export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }) => {
-  
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const getInitialStructure = useCallback(() => initialStages.map(stage => ({
     ...stage,
     currentStatus: "Inactive",
@@ -34,31 +35,23 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
   })), []);
 
   const [data, setData] = useState(getInitialStructure());
-  const [loading, setLoading] = useState(false);
 
-  /* ================= CLOUD SYNC LOGIC ================= */
-  
   useEffect(() => {
     if (!plantName) return;
 
     const fetchPlantData = async () => {
       setLoading(true);
       try {
-        // Added redirect: "follow" to handle Google Script's internal redirection
         const response = await fetch(`${APPS_SCRIPT_URL}?plantName=${encodeURIComponent(plantName)}`, {
           method: "GET",
           redirect: "follow", 
         });
-
-        if (!response.ok) throw new Error("Network response was not ok");
-        
         const cloudMap = await response.json();
 
         if (cloudMap && Object.keys(cloudMap).length > 0) {
           const mergedData = initialStages.map(stage => {
             const stageKey = `${stage.id}_STAGE`;
             const cloudStage = cloudMap[stageKey];
-
             return {
               ...stage,
               currentStatus: cloudStage?.status || "Inactive",
@@ -83,7 +76,6 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
         }
       } catch (error) {
         console.error("Cloud Fetch Error:", error);
-        // Fallback to local structure if fetch fails
         setData(getInitialStructure());
       } finally {
         setLoading(false);
@@ -93,54 +85,42 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
     fetchPlantData();
   }, [plantName, getInitialStructure]);
 
-  // 1. Add a new state at the top of your Provider
-const [isSyncing, setIsSyncing] = useState(false);
+  const syncToCloud = useCallback(async (updatedData) => {
+    if (!plantName) return;
+    setIsSyncing(true);
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plantName,
+          userEmail: userEmail || "Anonymous",
+          data: updatedData
+        }),
+      });
+      // Small timeout to allow the UI to show "Saved"
+      setTimeout(() => setIsSyncing(false), 1500); 
+    } catch (error) {
+      console.error("Failed to sync:", error);
+      setIsSyncing(false);
+    }
+  }, [plantName, userEmail]);
 
-// 2. Update the syncToCloud function
-const syncToCloud = useCallback(async (updatedData) => {
-  if (!plantName) return;
-  
-  setIsSyncing(true); // Start the spinner/indicator
-  
-  try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors", 
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        plantName,
-        userEmail: userEmail || "Anonymous",
-        data: updatedData
-      }),
-    });
-    // We don't wait for a response because of 'no-cors'
-    // but we can give it a small delay before hiding the "Saving" icon
-    setTimeout(() => setIsSyncing(false), 2000); 
-    
-  } catch (error) {
-    console.error("Failed to sync:", error);
-    setIsSyncing(false);
-    alert("Cloud Sync Failed. Please check your internet.");
-  }
-}, [plantName, userEmail]);
-
-  /* ================= AUTHORIZATION LOGIC ================= */
   const canEdit = (stageDepartment) => {
     if (!userEmail) return false;
     const emailKey = userEmail.toLowerCase().trim();
     const userDept = ACCESS_CONTROL[emailKey];
-    
     if (userDept === "ADMIN") return true;
     return userDept && stageDepartment.includes(userDept);
   };
 
-  /* ================= UPDATE FUNCTIONS ================= */
   const updateStatus = (stageId, substageId, newStatus, deptName = "System") => {
     setData((prev) => {
       const newData = prev.map((stage) => {
         if (stage.id !== stageId) return stage;
         if (!canEdit(stage.department)) {
-          alert("Access Denied: You do not have permission for this department.");
+          alert("Access Denied.");
           return stage;
         }
 
@@ -180,7 +160,6 @@ const syncToCloud = useCallback(async (updatedData) => {
     });
   };
 
-  /* ================= HELPERS ================= */
   const getPlantStats = () => {
     const total = data.length;
     const completed = data.filter(s => s.currentStatus === "Completed").length;
@@ -198,14 +177,9 @@ const syncToCloud = useCallback(async (updatedData) => {
   return (
     <ProjectContext.Provider
       value={{
-        data,
-        loading,
-        updateStatus,
-        updateDates,
-        canEdit,
-        userEmail,
-        getPlantStats,
-        logout
+        data, loading, isSyncing,
+        updateStatus, updateDates,
+        canEdit, userEmail, getPlantStats, logout
       }}
     >
       {children}
