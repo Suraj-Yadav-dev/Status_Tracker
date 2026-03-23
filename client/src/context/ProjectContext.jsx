@@ -1,110 +1,158 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { stages as initialStages } from "../data/stageConfig";
 
-// 1. Define and EXPORT Access Control Mapping
+// 1. API Configuration
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY5dJF7sNHM6fr_XYKAX5LKkpMx8v1s-W2ktOXYt4hbmRdz7uCqXo2jkNjatlp6bTVsg/exec";
+
 export const ACCESS_CONTROL = {
   "marketing@reliable-aes.in": "MR",
-  "kprtmarketing@reliable-aes.in":"MARKETING",
-  "finance@reliable-aes.in":"", // Full access for Finance
-  "kandpal@reliable-aes.in":"",
-   // Full access for MD
-  "quality@reliable-aes.in":"QUALITY" ,
-  "qarj@reliable-aes.in":"QUALITY",
-  "accounts.raes@reliable-aes.in":"ACCOUNTS",
-  "hr1@reliable-aes.in":"HR",
+  "kprtmarketing@reliable-aes.in": "MARKETING",
+  "finance@reliable-aes.in": "ADMIN", 
+  "kandpal@reliable-aes.in": "ADMIN",
+  "quality@reliable-aes.in": "QUALITY",
+  "qarj@reliable-aes.in": "QUALITY",
+  "accounts.raes@reliable-aes.in": "ACCOUNTS",
+  "hr1@reliable-aes.in": "HR",
 };
 
 export const ProjectContext = createContext();
 
-// Added plantName to props
 export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }) => {
   
-  // Create a unique key for LocalStorage based on the selected plant
-  // Example: "plant_data_SDL_SIKRI"
-  const STORAGE_KEY = plantName 
-    ? `plant_data_${plantName.replace(/\s+/g, '_')}` 
-    : "plant_master_data_default";
-
-  // 2. Initialize State from LocalStorage using the UNIQUE KEY
-  const [data, setData] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-
-    // Default structure if no saved data exists for THIS SPECIFIC PLANT
-    return initialStages.map((stage) => ({
-      ...stage,
+  const getInitialStructure = useCallback(() => initialStages.map(stage => ({
+    ...stage,
+    currentStatus: "Inactive",
+    startDate: "",
+    endDate: "",
+    lastUpdatedBy: "",
+    substages: stage.substages.map(sub => ({
+      ...sub,
       currentStatus: "Inactive",
       startDate: "",
       endDate: "",
-      lastUpdatedBy: "", 
-      substages: stage.substages.map((sub) => ({
-        ...sub,
-        currentStatus: "Inactive",
-        startDate: "",
-        endDate: "",
-      })),
-    }));
-  });
+    })),
+  })), []);
 
-  // 3. Persist to LocalStorage using the UNIQUE KEY whenever 'data' changes
+  const [data, setData] = useState(getInitialStructure());
+  const [loading, setLoading] = useState(false);
+
+  /* ================= CLOUD SYNC LOGIC ================= */
+  
   useEffect(() => {
-    if (plantName) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (!plantName) return;
+
+    const fetchPlantData = async () => {
+      setLoading(true);
+      try {
+        // Added redirect: "follow" to handle Google Script's internal redirection
+        const response = await fetch(`${APPS_SCRIPT_URL}?plantName=${encodeURIComponent(plantName)}`, {
+          method: "GET",
+          redirect: "follow", 
+        });
+
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const cloudMap = await response.json();
+
+        if (cloudMap && Object.keys(cloudMap).length > 0) {
+          const mergedData = initialStages.map(stage => {
+            const stageKey = `${stage.id}_STAGE`;
+            const cloudStage = cloudMap[stageKey];
+
+            return {
+              ...stage,
+              currentStatus: cloudStage?.status || "Inactive",
+              startDate: cloudStage?.start || "",
+              endDate: cloudStage?.end || "",
+              lastUpdatedBy: cloudStage?.user || "",
+              substages: stage.substages.map(sub => {
+                const subKey = `${stage.id}_${sub.id}`;
+                const cloudSub = cloudMap[subKey];
+                return {
+                  ...sub,
+                  currentStatus: cloudSub?.status || "Inactive",
+                  startDate: cloudSub?.start || "",
+                  endDate: cloudSub?.end || ""
+                };
+              })
+            };
+          });
+          setData(mergedData);
+        } else {
+          setData(getInitialStructure());
+        }
+      } catch (error) {
+        console.error("Cloud Fetch Error:", error);
+        // Fallback to local structure if fetch fails
+        setData(getInitialStructure());
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlantData();
+  }, [plantName, getInitialStructure]);
+
+  const syncToCloud = useCallback(async (updatedData) => {
+    if (!plantName) return;
+    try {
+      // mode: "no-cors" is necessary for Google Apps Script POST from localhost
+      await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plantName,
+          userEmail: userEmail || "Anonymous",
+          data: updatedData
+        }),
+      });
+      // Note: With no-cors, we can't read the response, 
+      // but the data will still arrive at the sheet.
+    } catch (error) {
+      console.error("Failed to sync with Google Sheets:", error);
     }
-  }, [data, STORAGE_KEY, plantName]);
+  }, [plantName, userEmail]);
 
   /* ================= AUTHORIZATION LOGIC ================= */
   const canEdit = (stageDepartment) => {
     if (!userEmail) return false;
-
-    // Direct check from our exported mapping
-    const userDept = ACCESS_CONTROL[userEmail.toLowerCase().trim()];
+    const emailKey = userEmail.toLowerCase().trim();
+    const userDept = ACCESS_CONTROL[emailKey];
     
-    // If the user's assigned department is ADMIN, they can edit everything
     if (userDept === "ADMIN") return true;
-
-    // Check if the user's department matches the stage's required department
-    // stageDepartment usually looks like "HR" or "QR, ADMIN"
     return userDept && stageDepartment.includes(userDept);
   };
 
-  /* ================= STATUS & DEPT UPDATE ================= */
+  /* ================= UPDATE FUNCTIONS ================= */
   const updateStatus = (stageId, substageId, newStatus, deptName = "System") => {
-    setData((prev) =>
-      prev.map((stage) => {
+    setData((prev) => {
+      const newData = prev.map((stage) => {
         if (stage.id !== stageId) return stage;
-
         if (!canEdit(stage.department)) {
-            console.error("Access Denied: Unauthorized department.");
-            alert("You do not have permission to update this department.");
-            return stage;
+          alert("Access Denied: You do not have permission for this department.");
+          return stage;
         }
 
         if (substageId === null) {
-          return { 
-            ...stage, 
-            currentStatus: newStatus, 
-            lastUpdatedBy: deptName 
-          };
+          return { ...stage, currentStatus: newStatus, lastUpdatedBy: deptName };
         }
 
         const updatedSubs = stage.substages.map((sub) =>
-          sub.id === substageId
-            ? { ...sub, currentStatus: newStatus }
-            : sub
+          sub.id === substageId ? { ...sub, currentStatus: newStatus } : sub
         );
-
         return { ...stage, substages: updatedSubs, lastUpdatedBy: deptName };
-      })
-    );
+      });
+      
+      syncToCloud(newData); 
+      return newData;
+    });
   };
 
-  /* ================= DATE UPDATE ================= */
   const updateDates = (stageId, substageId, field, value) => {
-    setData((prev) =>
-      prev.map((stage) => {
+    setData((prev) => {
+      const newData = prev.map((stage) => {
         if (stage.id !== stageId) return stage;
-
         if (!canEdit(stage.department)) return stage;
 
         if (substageId === null) {
@@ -112,17 +160,17 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
         }
 
         const updatedSubs = stage.substages.map((sub) =>
-          sub.id === substageId
-            ? { ...sub, [field]: value }
-            : sub
+          sub.id === substageId ? { ...sub, [field]: value } : sub
         );
-
         return { ...stage, substages: updatedSubs };
-      })
-    );
+      });
+
+      syncToCloud(newData);
+      return newData;
+    });
   };
 
-  /* ================= DASHBOARD ANALYTICS ================= */
+  /* ================= HELPERS ================= */
   const getPlantStats = () => {
     const total = data.length;
     const completed = data.filter(s => s.currentStatus === "Completed").length;
@@ -135,18 +183,13 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
     };
   };
 
-  /* ================= LOGOUT HELPER ================= */
-  const logout = () => {
-    setUserEmail(""); 
-    // We don't need to manually clear 'data' here because 
-    // when the user logs back in with a different plant, 
-    // the STORAGE_KEY will change and load that plant's data.
-  };
+  const logout = () => setUserEmail("");
 
   return (
     <ProjectContext.Provider
       value={{
         data,
+        loading,
         updateStatus,
         updateDates,
         canEdit,
@@ -162,8 +205,6 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
 
 export const useProject = () => {
   const context = useContext(ProjectContext);
-  if (!context) {
-    throw new Error("useProject must be used within ProjectProvider");
-  }
+  if (!context) throw new Error("useProject must be used within ProjectProvider");
   return context;
 };
