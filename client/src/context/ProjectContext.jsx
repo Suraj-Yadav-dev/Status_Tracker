@@ -93,26 +93,36 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
     fetchPlantData();
   }, [plantName, getInitialStructure]);
 
-  const syncToCloud = useCallback(async (updatedData) => {
-    if (!plantName) return;
-    try {
-      // mode: "no-cors" is necessary for Google Apps Script POST from localhost
-      await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors", 
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plantName,
-          userEmail: userEmail || "Anonymous",
-          data: updatedData
-        }),
-      });
-      // Note: With no-cors, we can't read the response, 
-      // but the data will still arrive at the sheet.
-    } catch (error) {
-      console.error("Failed to sync with Google Sheets:", error);
-    }
-  }, [plantName, userEmail]);
+  // 1. Add a new state at the top of your Provider
+const [isSyncing, setIsSyncing] = useState(false);
+
+// 2. Update the syncToCloud function
+const syncToCloud = useCallback(async (updatedData) => {
+  if (!plantName) return;
+  
+  setIsSyncing(true); // Start the spinner/indicator
+  
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plantName,
+        userEmail: userEmail || "Anonymous",
+        data: updatedData
+      }),
+    });
+    // We don't wait for a response because of 'no-cors'
+    // but we can give it a small delay before hiding the "Saving" icon
+    setTimeout(() => setIsSyncing(false), 2000); 
+    
+  } catch (error) {
+    console.error("Failed to sync:", error);
+    setIsSyncing(false);
+    alert("Cloud Sync Failed. Please check your internet.");
+  }
+}, [plantName, userEmail]);
 
   /* ================= AUTHORIZATION LOGIC ================= */
   const canEdit = (stageDepartment) => {
