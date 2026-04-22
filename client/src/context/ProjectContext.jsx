@@ -25,12 +25,14 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
     currentStatus: "Inactive",
     startDate: "",
     endDate: "",
+    remark: "", // Added default remark state
     lastUpdatedBy: "",
     substages: stage.substages.map(sub => ({
       ...sub,
       currentStatus: "Inactive",
       startDate: "",
       endDate: "",
+      remark: "", // Added default remark state
     })),
   })), []);
 
@@ -57,6 +59,7 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
               currentStatus: cloudStage?.status || "Inactive",
               startDate: cloudStage?.start || "",
               endDate: cloudStage?.end || "",
+              remark: cloudStage?.remark || "", // Map remark from cloud
               lastUpdatedBy: cloudStage?.user || "",
               substages: stage.substages.map(sub => {
                 const subKey = `${stage.id}_${sub.id}`;
@@ -65,7 +68,8 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
                   ...sub,
                   currentStatus: cloudSub?.status || "Inactive",
                   startDate: cloudSub?.start || "",
-                  endDate: cloudSub?.end || ""
+                  endDate: cloudSub?.end || "",
+                  remark: cloudSub?.remark || "" // Map remark from cloud
                 };
               })
             };
@@ -160,6 +164,28 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
     });
   };
 
+  // --- NEW: updateRemark Function ---
+  const updateRemark = (stageId, substageId, newRemark) => {
+    setData((prev) => {
+      const newData = prev.map((stage) => {
+        if (stage.id !== stageId) return stage;
+        if (!canEdit(stage.department)) return stage;
+
+        if (substageId === null) {
+          return { ...stage, remark: newRemark };
+        }
+
+        const updatedSubs = stage.substages.map((sub) =>
+          sub.id === substageId ? { ...sub, remark: newRemark } : sub
+        );
+        return { ...stage, substages: updatedSubs };
+      });
+
+      syncToCloud(newData);
+      return newData;
+    });
+  };
+
   const getPlantStats = () => {
     const total = data.length;
     const completed = data.filter(s => s.currentStatus === "Completed").length;
@@ -178,7 +204,7 @@ export const ProjectProvider = ({ children, userEmail, setUserEmail, plantName }
     <ProjectContext.Provider
       value={{
         data, loading, isSyncing,
-        updateStatus, updateDates,
+        updateStatus, updateDates, updateRemark, // Exported here
         canEdit, userEmail, getPlantStats, logout
       }}
     >

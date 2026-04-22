@@ -3,18 +3,22 @@ import { useProject } from "../../context/ProjectContext";
 import SubStageNode from "./SubStageNode";
 
 const StageNode = ({ stage, isLast }) => {
-  const { updateStatus, updateDates, canEdit } = useProject();
+  // 1. Added `updateRemark` to the destructured context
+  const { updateStatus, updateDates, updateRemark, canEdit } = useProject();
   const [isOpen, setIsOpen] = useState(false);
   const [showUpdateBox, setShowUpdateBox] = useState(false);
   
   const [validationError, setValidationError] = useState("");
   const [tempDept, setTempDept] = useState(stage.lastUpdatedBy || "");
+  
+  // 2. Added local state for the remark
+  const [tempRemark, setTempRemark] = useState(stage.remark || "");
 
   const isActive = stage.currentStatus === "Active";
   const isCompleted = stage.currentStatus === "Completed";
   const hasPermission = canEdit(stage.department);
 
-  // --- NEW: STAGE VALIDATION LOGIC ---
+  // --- STAGE VALIDATION LOGIC ---
   const validateStageDates = () => {
     if (!stage.startDate && !stage.endDate) return { hasError: false };
 
@@ -23,35 +27,20 @@ const StageNode = ({ stage, isLast }) => {
     const targetStart = stage.targetStartDate ? new Date(stage.targetStartDate) : null;
     const targetEnd = stage.targetEndDate ? new Date(stage.targetEndDate) : null;
 
-    // 1. Guard against impossible date ranges (End before Start)
     if (start && end && end < start) {
-      return { 
-        hasError: true, 
-        type: "INVALID", 
-        message: "End date is before Start date" 
-      };
+      return { hasError: true, type: "INVALID", message: "End date is before Start date" };
     }
 
-    // 2. Check if the Stage is DELAYED in COMPLETION
     if (end && targetEnd && end > targetEnd) {
       const diffTime = end.getTime() - targetEnd.getTime();
       const delayDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return {
-        hasError: true,
-        type: "DELAY",
-        message: `Delayed by ${delayDays} day${delayDays > 1 ? 's' : ''}`
-      };
+      return { hasError: true, type: "DELAY", message: `Delayed by ${delayDays} day${delayDays > 1 ? 's' : ''}` };
     }
 
-    // 3. Check if the Stage is DELAYED in STARTING (if not ended yet)
     if (start && targetStart && start > targetStart && !end) {
       const diffTime = start.getTime() - targetStart.getTime();
       const delayDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return {
-        hasError: true,
-        type: "DELAY",
-        message: `Started late by ${delayDays} day${delayDays > 1 ? 's' : ''}`
-      };
+      return { hasError: true, type: "DELAY", message: `Started late by ${delayDays} day${delayDays > 1 ? 's' : ''}` };
     }
 
     return { hasError: false };
@@ -74,7 +63,14 @@ const StageNode = ({ stage, isLast }) => {
       }
     }
 
+    // Save status and department
     updateStatus(stage.id, null, stage.currentStatus, tempDept);
+    
+    // 3. Save the remark to context
+    if (updateRemark) {
+      updateRemark(stage.id, null, tempRemark);
+    }
+
     setShowUpdateBox(false);
   };
 
@@ -101,19 +97,16 @@ const StageNode = ({ stage, isLast }) => {
             </div>
           </div>
 
-          {/* --- NEW: DYNAMIC ALERT UI FOR STAGE --- */}
+          {/* DYNAMIC ALERT UI */}
           {validation.hasError && (
             <div className="mb-4 p-2.5 bg-red-600 text-white text-[10px] font-bold rounded-lg animate-pulse flex items-center justify-between shadow-md">
-              <span>
-                {validation.type === "DELAY" ? "⚠️ STAGE DELAY" : "⚠️ DATE ERROR"}
-              </span>
+              <span>{validation.type === "DELAY" ? "⚠️ STAGE DELAY" : "⚠️ DATE ERROR"}</span>
               <span>{validation.message}</span>
             </div>
           )}
 
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4 space-y-2">
             
-            {/* HARDCODED TARGET TIMELINE DISPLAY */}
             {stage.targetStartDate && stage.targetEndDate && (
               <div className="flex flex-col mb-2 p-2 bg-blue-50 border border-blue-100 rounded text-center">
                 <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1">🎯 Target Timeline</span>
@@ -134,6 +127,14 @@ const StageNode = ({ stage, isLast }) => {
               ${isActive ? "bg-yellow-400 text-yellow-900" : isCompleted ? "bg-green-500 text-white" : "bg-slate-200 text-slate-500"}`}>
               {stage.currentStatus}
             </div>
+
+            {/* 4. Display the remark on the card if it exists */}
+            {stage.remark && (
+              <div className="mt-2 p-2 bg-white border border-slate-200 rounded-md text-xs text-slate-600">
+                <span className="font-bold text-[9px] uppercase tracking-widest text-slate-400 block mb-0.5">Remarks</span>
+                <p className="italic">{stage.remark}</p>
+              </div>
+            )}
           </div>
 
           {hasPermission ? (
@@ -202,11 +203,10 @@ const StageNode = ({ stage, isLast }) => {
                 >
                   <option value="">Select Department...</option>
                   <option value="HR">Human Resources (HR)</option>
-                  <option value="QR">Quality & Reliability (QR)</option>
+                  <option value="QR">Quality Department (QR)</option>
                   <option value="Accounts">Accounts/Finance</option>
-                  <option value="MR">MARKETING </option>
+                  <option value="MR">MARKETING</option>
                   <option value="Production">Production Team</option>
-                  
                 </select>
               </div>
 
@@ -242,6 +242,18 @@ const StageNode = ({ stage, isLast }) => {
                   <option value="Active">🟡 Active</option>
                   <option value="Completed">🟢 Completed</option>
                 </select>
+              </div>
+
+              {/* 5. Add Remarks Textarea in Modal */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest">Remarks / Notes</label>
+                <textarea 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 outline-none resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  rows="3"
+                  placeholder="Add any remarks, reasons for delay, or updates here..."
+                  value={tempRemark}
+                  onChange={(e) => setTempRemark(e.target.value)}
+                ></textarea>
               </div>
 
               <button 
